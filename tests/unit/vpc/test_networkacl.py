@@ -136,6 +136,21 @@ class TestDescribeNetworkAcls(AWSMockServiceTestCase):
                                   'Version'])
         self.assertEqual(len(response), 2)
 
+    def test_network_acl_variables(self):
+        self.set_http_response(status_code=200)
+        response = self.service_connection.get_all_network_acls(['acl-5566953c', 'acl-5d659634'],
+                                                                [('vpc-id', 'vpc-5266953b')])
+        self.assert_request_parameters({
+            'Action': 'DescribeNetworkAcls',
+            'NetworkAclId.1': 'acl-5566953c',
+            'NetworkAclId.2': 'acl-5d659634',
+            'Filter.1.Name': 'vpc-id',
+            'Filter.1.Value.1': 'vpc-5266953b'},
+            ignore_params_values=['AWSAccessKeyId', 'SignatureMethod',
+                                  'SignatureVersion', 'Timestamp',
+                                  'Version'])
+        self.assertEqual(len(response), 2)
+
 
 class TestReplaceNetworkAclAssociation(AWSMockServiceTestCase):
 
@@ -469,6 +484,53 @@ class TestDeleteNetworkAclEntry(AWSMockServiceTestCase):
                                   'SignatureVersion', 'Timestamp',
                                   'Version'])
         self.assertEqual(response, True)
+
+
+class TestGetNetworkAclAssociations(AWSMockServiceTestCase):
+
+    connection_class = VPCConnection
+
+    def default_body(self):
+        return b"""
+        <DescribeNetworkAclsResponse xmlns="http://ec2.amazonaws.com/doc/2013-10-01/">
+            <requestId>59dbff89-35bd-4eac-99ed-be587EXAMPLE</requestId>
+            <networkAclSet>
+            <item>
+              <networkAclId>acl-5d659634</networkAclId>
+              <vpcId>vpc-5266953b</vpcId>
+              <default>false</default>
+              <entrySet>
+                <item>
+                  <ruleNumber>110</ruleNumber>
+                  <protocol>6</protocol>
+                  <ruleAction>allow</ruleAction>
+                  <egress>true</egress>
+                  <cidrBlock>0.0.0.0/0</cidrBlock>
+                  <portRange>
+                    <from>49152</from>
+                    <to>65535</to>
+                  </portRange>
+                </item>
+              </entrySet>
+              <associationSet>
+                <item>
+                  <networkAclAssociationId>aclassoc-c26596ab</networkAclAssociationId>
+                  <networkAclId>acl-5d659634</networkAclId>
+                  <subnetId>subnet-f0669599</subnetId>
+                </item>
+              </associationSet>
+              <tagSet/>
+            </item>
+          </networkAclSet>
+        </DescribeNetworkAclsResponse>
+    """
+
+    def test_get_network_acl_associations(self):
+        self.set_http_response(status_code=200)
+        api_response = self.service_connection.get_all_network_acls()
+        association = api_response[0].associations[0]
+        self.assertEqual(association.network_acl_id, 'acl-5d659634')
+
 
 if __name__ == '__main__':
     unittest.main()
